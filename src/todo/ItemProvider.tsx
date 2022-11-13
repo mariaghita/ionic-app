@@ -4,27 +4,24 @@ import { getLogger } from '../core';
 import { ItemProps } from './ItemProps';
 import { createItem, getItem, getItems, newWebSocket, updateItem } from './itemApi';
 import { AuthContext } from '../auth';
-import { Plugins } from '@capacitor/core';
+import { Plugins, Storage } from '@capacitor/core';
 
 const log = getLogger('ItemProvider');
 const { Network } = Plugins;
-const {Storage} = Plugins;
-
-
-
+//const {Storage} = Plugins;
 
 
 type SaveItemFn = (item: ItemProps) => Promise<any>;
 
 export interface ItemsState {
   items?: ItemProps[],
-  conflictualItems?: ItemProps[],
+  failCount: number,
   fetching: boolean,
   fetchingError?: Error | null,
   saving: boolean,
   savingError?: Error | null,
   saveItem?: SaveItemFn,
-  savingPending: boolean,
+
 }
 
 interface ActionProps {
@@ -33,9 +30,9 @@ interface ActionProps {
 }
 
 const initialState: ItemsState = {
+  failCount : 0,
   fetching: false,
   saving: false,
-  savingPending: false,
 };
 
 const FETCH_ITEMS_STARTED = 'FETCH_ITEMS_STARTED';
@@ -44,7 +41,7 @@ const FETCH_ITEMS_FAILED = 'FETCH_ITEMS_FAILED';
 const SAVE_ITEM_STARTED = 'SAVE_ITEM_STARTED';
 const SAVE_ITEM_SUCCEEDED = 'SAVE_ITEM_SUCCEEDED';
 const SAVE_ITEM_FAILED = 'SAVE_ITEM_FAILED';
-const SAVING_PENDING = 'SAVING_PENDING';
+const DELETE_DUPLICATE = 'DELETE_DUPLICATE';
 
 const reducer: (state: ItemsState, action: ActionProps) => ItemsState =
   (state, { type, payload }) => {
@@ -60,27 +57,32 @@ const reducer: (state: ItemsState, action: ActionProps) => ItemsState =
       case SAVE_ITEM_SUCCEEDED:
         const items = [...(state.items || [])];
         const item = payload.item;
-        const index = items.findIndex(it => it._id === item.id);
+        const index = items.findIndex(it => it._id === item._id);
         if (index === -1) {
           items.splice(0, 0, item);
         } else {
           items[index] = item;
         }
-        return { ...state, items, saving: false, savingPending: false };
+        return { ...state, items, saving: false};
       case SAVE_ITEM_FAILED:{
-        const items = [...(state.items || [])];
-        const item = payload.item;
-        //item.status = false
-        const index = items.findIndex(it => it._id === item._id);
-        if(index === -1){
-          items.splice(0,0,item);
-        }else{
-          items[index] = item;
+        const failedItem = payload.item;
+        const failCount = state.failCount + 1;
+        if(!failedItem._id){
+          failedItem._failed=true;
+          failedItem._id = failCount.toString();
         }
-        return { ...state, items, savingError: payload.error, saving: false, savingPending: true };
+        const failedItems = [...(state.items || [])];
+        const failedIndex = failedItems.findIndex(it => it._id === failedItem._id);
+        if(failedIndex === -1){
+          failedItems.splice(0,0,failedItem);
+        }else{
+          failedItems[failedIndex] = failedItem;
+        }
+        return {...state, savingError: payload.error, saving: false, failCount, items: failedItems};
       }
-      case SAVING_PENDING:
-        return {...state, conflictualItems: payload.conflictualItems, savingPending: true}
+      case DELETE_DUPLICATE:
+        const duplicate=payload.item
+        return {...state,items: state.items?.filter((item)=>item._id!==duplicate._id)};
       default:
         return state;
     }
@@ -95,52 +97,37 @@ interface ItemProviderProps {
 export const ItemProvider: React.FC<ItemProviderProps> = ({ children }) => {
   const {token} = useContext(AuthContext);
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { items, fetching, fetchingError, saving, savingError, savingPending, conflictualItems } = state;
+  const { items, failCount, fetching, fetchingError, saving, savingError } = state;
   useEffect(getItemsEffect, [token]);
   useEffect(networkStatusEffect, []);
   useEffect(wsEffect, [token]);
-  const saveItem = useCallback<SaveItemFn>(saveItemCallback, [token]);
-  const value = { items, fetching, fetchingError, saving, savingError, savingPending, saveItem, conflictualItems };
-  log('returns');
-  return (
-    <ItemContext.Provider value={value}>
-      {children}
-    </ItemContext.Provider>
-  );
+  useEffect(()=>{if(items){saveLocalStorageItems(items)}},[items])
   
   function networkStatusEffect() {
     Network.addListener("networkStatusChange", status => {
       log("Network status changed: ", status);
 
-      tryToUpdateItems();
-
-      async function tryToUpdateItems() {
-        const status = await Network.getStatus();
-        if(status.connected === true){
-          const { keys } = await Storage.keys();
-          for(let i = 0; i < keys.length; i ++)
-            if(keys[i].startsWith("item_save")){
-              const toUpdate = await Storage.get({key: keys[i]});
-              const toUpdateItem = JSON.parse(toUpdate.value || '{}');
-              toUpdateItem.id = keys[i].split("save")[1];
-  
-              const existingItem = await getItem(toUpdateItem.id);
-              if(existingItem.version !== toUpdateItem.version + 1){
-                saveItemCallback(toUpdateItem);
-              }
-              else{
-                toUpdateItem._id = toUpdateItem._id + "_1";
-                existingItem._id = existingItem._id + "_2";
-                const conflictualItems = [toUpdateItem, existingItem];
-                dispatch({type: SAVING_PENDING, payload: { conflictualItems }});
-              }
-              await Storage.remove({key: keys[i]});
+      if(status.connected){
+          items?.forEach(async item => {
+            if(item._failed){
+              dispatch({type: DELETE_DUPLICATE, payload: {item}});
+              delete item._failed;
+              delete item._id;
             }
-        }
+            saveItemCallback(item);
+          })
       }
   
       })
     }
+    const saveItem = useCallback<SaveItemFn>(saveItemCallback, [token]);
+    const value = { items,failCount, fetching, fetchingError, saving, savingError, saveItem };
+    log('returns');
+    return (
+    <ItemContext.Provider value={value}>
+      {children}
+    </ItemContext.Provider>
+    );
 
   function getItemsEffect() {
     let canceled = false;
@@ -156,44 +143,34 @@ export const ItemProvider: React.FC<ItemProviderProps> = ({ children }) => {
       try {
         log('fetchItems started');
         dispatch({ type: FETCH_ITEMS_STARTED });
-        const items = await getItems((await Storage.get({key: 'token'})).value);
-        log('fetchItems succeeded');
-        if (!canceled) {
-          dispatch({ type: FETCH_ITEMS_SUCCEEDED, payload: { items } });
+        //const items = await getItems((await Storage.get({key: 'token'})).value);
+        let items = await getLocalStorageItems();
+        if(!items){
+          items = await getItems(token);
         }
-        let allItems = {...items};
-
-        for(let i = 0; i < items.length; i++){
-          await Storage.set({
-            key: "item" + allItems[i]._id,
-            value: JSON.stringify({
-              name: allItems[i].name,
-              author: allItems[i].author,
-              available: allItems[i].available,
-              publish_date: allItems[i].publish_date,
-              pages: allItems[i].pages,
-              version: allItems[i].version
-            })
-          });
+        await saveLocalStorageItems(items);
+        log('fetchItems succeded');
+        if(!canceled){
+          dispatch({type: FETCH_ITEMS_SUCCEEDED, payload: {items}});
         }
-
-      } catch (error) {
+      }catch (error){
         log('fetchItems failed');
-        const { keys } = await Storage.keys();
-        let allItems = new Array();
-
-        for(let i = 0; i < keys.length; i++){
-          if(keys[i] !== 'token'){
-            const ret = await Storage.get({key: keys[i]});
-            const result = JSON.parse(ret.value || '{}');
-            allItems.push(result)
-          }
-        }
-        const items = allItems;
-
-        dispatch({ type: FETCH_ITEMS_FAILED, payload: { items, error } });
+        dispatch({type: FETCH_ITEMS_FAILED, payload: {error}});
       }
-    }
+  }
+}
+
+  async function getLocalStorageItems(){
+    return JSON.parse((await Storage.get({
+      key: 'items',
+    })).value);
+  }
+
+  async function saveLocalStorageItems(items:ItemProps[]){
+    await Storage.set({
+      key: 'items',
+      value: JSON.stringify(items)
+    });
   }
 
   async function saveItemCallback(item: ItemProps) {
@@ -205,7 +182,7 @@ export const ItemProvider: React.FC<ItemProviderProps> = ({ children }) => {
       dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item: savedItem } });
     } catch (error) {
       log('saveItem failed');
-      dispatch({ type: SAVE_ITEM_FAILED, payload: { item, error } });
+      dispatch({ type: SAVE_ITEM_FAILED, payload: {error, item} });
     }
   }
 

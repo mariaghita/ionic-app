@@ -34,7 +34,7 @@ const ItemEdit: React.FC<ItemEditProps> = ({ history, match }) => {
   const [publish_date, setDate] = useState(new Date(Date.now()));
   const [pages, setPages] = useState(0);
   const [item, setItem] = useState<ItemProps>();
-  const [version, setVersion] = useState(0);
+  
   useEffect(() => {
     log('useEffect');
     const routeId = match.params.id || '';
@@ -46,11 +46,11 @@ const ItemEdit: React.FC<ItemEditProps> = ({ history, match }) => {
       setAvailability(item.available);
       setDate(item.publish_date);
       setPages(item.pages);
-      setVersion(item.version);
+      
     }
   }, [match.params.id, items]);
   const handleSave = useCallback(() => {
-    const editedItem = item ? { ...item, name, author, available, pages, publish_date, version } : { name, author, available, pages, publish_date, version };
+    const editedItem = item ? { ...item, name, author, available, pages, publish_date } : { name, author, available, pages, publish_date };
     saveItem && saveItem(editedItem).then(() => history.goBack());
   }, [item, saveItem, name, author, available, pages, publish_date,  history]);
   log('render');

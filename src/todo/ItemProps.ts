@@ -6,6 +6,6 @@ export interface ItemProps {
   author: string;
   available: boolean;
   publish_date: Date;
-  version: number;
   pages: number;
+  _failed?: boolean;
 }

@@ -26,7 +26,8 @@ import { AuthContext } from '../auth'
 import { Network, NetworkStatus } from '@capacitor/core';
 import { IonInfiniteScroll, IonInfiniteScrollContent} from '@ionic/react';
 import { ItemProps } from './ItemProps';
-import { useNetwork } from '../utils/useNetwork';
+import {type} from "os";
+
 
 const log = getLogger('ItemList');
 
@@ -35,7 +36,7 @@ let NStatus = "Online";
 
 
 Network.addListener("networkStatusChange", status => {
-  NStatus = status.connected === true ? "Online" : "Offline";
+  NStatus = status.connected ? "Online" : "Offline";
   log(NStatus, "in listener");
 })
 
@@ -43,7 +44,7 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
   
   const [networkStatus, setNetworkStatus] = useState<string>(NStatus);
   Network.addListener("networkStatusChange", status => {
-    setNetworkStatus(status.connected === true ? "Online" : "Offline");
+    setNetworkStatus(status.connected ? "Online" : "Offline");
     log(networkStatus, "in listener");
   })
   const[disableInfiniteScroll, setDisableInfiniteScroll] = useState<boolean>(false);
@@ -65,10 +66,10 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
     logout?.();
     return <Redirect to={{pathname: "/login"}} />;
   }
-  const { items, fetching, fetchingError, savingPending, saveItem, conflictualItems } = useContext(ItemContext);
+  const { items, fetching, fetchingError, savingError} = useContext(ItemContext);
   const[pos, setPos] = useState(5);
   const [booksShow, setBooksShow] = useState<ItemProps[]>([]);
-  const[conflict, setConflict] = useState<boolean>(false);
+  
 
   async function searchNext($event: CustomEvent<void>)
   {
@@ -89,7 +90,7 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
     if(items?.length){
       setBooksShow(items.slice(0, pos));
     }
-  }, [items]);
+  }, [items, pos]);
 
   useEffect(()=>{
     if(filter && items){
@@ -103,7 +104,7 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
         setBooksShow(items);
       }
     }
-  }, [filter]);
+  }, [filter, items]);
 
   //search
   useEffect(()=>{
@@ -114,46 +115,10 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
     if(searchText && items){
       setBooksShow(items.filter((item) => item.name.startsWith(searchText)));
     }
-  },[searchText]);
-    
-  useEffect(() => {
-    if(savingPending === true){
-      setConflict(true);
-    }
-    else{
-      setConflict(false);
-    }
-  }, [savingPending]);
-
-  async function handleEdit(id : string | undefined) {
-    const item = conflictualItems?.find(it => it._id === id);
-    if(item && item._id){
-        console.log(item);
-        item._id = item._id.split('_')[0];
-        item.version = item.version + 1;
-        console.log(item);
-        saveItem && saveItem(item);
-    }
-    return;
-
-  }
-
-
-  if(conflict === true){
-    return(
-      <IonPage>
-        <IonHeader>
-          <IonToolbar>
-            <IonTitle> BooksApp - server is offline </IonTitle>
-          </IonToolbar>
-        </IonHeader>
-        <IonContent>
-          <IonLabel>Te adaug io cand mergi</IonLabel>
-        </IonContent>
-      </IonPage>
-    )
-  }else
-
+  },[items, searchText]);
+  log("ITEM LIST!!!!!!!!!!!!!!" + typeof(items))
+  log(items)
+  log("IM HERE!!!!!!!!" + typeof(booksShow));
   return (
     <IonPage>
       <IonHeader>
@@ -176,13 +141,14 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
       </IonHeader>
 
       <IonContent>
+
         <IonLoading isOpen={fetching} message="Fetching items" />
-        {items && booksShow.map((item: ItemProps) => {
+        {items && booksShow.map((item: ItemProps) => { //aici de rezolvat cumva
           return(
           <IonList>
             <div className="item">
-            
-              <Item key={item._id} _id={item._id} name={item.name}  onEdit={id => history.push(`/item/${id}`)} author={item.author} available={item.available} publish_date={item.publish_date} pages={item.pages} version={item.version} />
+
+              <Item key={item._id} _id={item._id} name={item.name}  onEdit={id => history.push(`/item/${id}`)} author={item.author} available={item.available} publish_date={item.publish_date} pages={item.pages} />
             </div>
           </IonList>
           );
@@ -190,6 +156,9 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
       <IonInfiniteScroll threshold="75px" disabled={disableInfiniteScroll} onIonInfinite={(e: CustomEvent<void>) => searchNext(e)}>
             <IonInfiniteScrollContent loadingSpinner="bubbles" loadingText="Loading for more items..."/>
         </IonInfiniteScroll>
+        {savingError &&(
+            <div>{'Failed to save item to server - saving it locally'}</div>
+        )}
         {fetchingError && (
           <div>{fetchingError.message || 'Failed to fetch items'}</div>
         )}

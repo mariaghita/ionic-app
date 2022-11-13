@@ -29,25 +29,7 @@ export const createItem: (token: string, item: ItemProps) => Promise<ItemProps[]
 }
 
 export const updateItem: (token: string, item: ItemProps) => Promise<ItemProps[]> = (token, item) => {
-  var result = axios.put(`${itemUrl}/${item._id}`, item, authConfig(token));
-  Network.getStatus().then(async status => {
-    if(status.connected === false){
-      await Storage.set(
-        {
-          key: "item_save" + item._id,
-          value: JSON.stringify({
-            name: item.name,
-            author: item.author,
-            available: item.available,
-            publish_date: item.publish_date,
-            pages: item.pages,
-            version: item.version
-          })
-        }
-      )
-    }
-  })
-  return withLogs(result, 'updateItem');
+  return withLogs(axios.put(`${itemUrl}/${item._id}`, item, authConfig(token)), 'updateItem');
 }
 
 interface MessageData {

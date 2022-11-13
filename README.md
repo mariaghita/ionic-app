@@ -17,4 +17,4 @@ lab 02:
 - display network status;
 - filter by pages (<500 or >=500);
 - search by name;
-- local storage - not yet;
+- local storage;

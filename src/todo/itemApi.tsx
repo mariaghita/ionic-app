@@ -1,9 +1,8 @@
-import { Network } from '@capacitor/core';
+
 import axios from 'axios';
-import { stat } from 'fs';
 import { getLogger, authConfig, withLogs } from '../core';
 import { ItemProps } from './ItemProps';
-import { Storage } from '@capacitor/core';
+
 
 const log = getLogger('itemApi');
 

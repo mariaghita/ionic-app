@@ -90,7 +90,7 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
     if(items?.length){
       setBooksShow(items.slice(0, pos));
     }
-  }, [items, pos]);
+  }, [ pos]);
 
   useEffect(()=>{
     if(filter && items){
@@ -104,7 +104,7 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
         setBooksShow(items);
       }
     }
-  }, [filter, items]);
+  }, [filter]);
 
   //search
   useEffect(()=>{
@@ -115,10 +115,10 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
     if(searchText && items){
       setBooksShow(items.filter((item) => item.name.startsWith(searchText)));
     }
-  },[items, searchText]);
-  log("ITEM LIST!!!!!!!!!!!!!!" + typeof(items))
-  log(items)
-  log("IM HERE!!!!!!!!" + typeof(booksShow));
+  },[searchText]);
+  //log("ITEM LIST!!!!!!!!!!!!!!" + Array.isArray(items))
+  //log(items)
+  //log("IM HERE!!!!!!!!" + Array.isArray(booksShow));
   return (
     <IonPage>
       <IonHeader>
@@ -143,16 +143,15 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
       <IonContent>
 
         <IonLoading isOpen={fetching} message="Fetching items" />
-        {items && booksShow.map((item: ItemProps) => { //aici de rezolvat cumva
-          return(
+        {items && (  //aici de rezolvat cumva
           <IonList>
-            <div className="item">
+            {items && booksShow.map((item: ItemProps) =>
 
               <Item key={item._id} _id={item._id} name={item.name}  onEdit={id => history.push(`/item/${id}`)} author={item.author} available={item.available} publish_date={item.publish_date} pages={item.pages} />
-            </div>
+            )}
           </IonList>
-          );
-      })}
+
+      )}
       <IonInfiniteScroll threshold="75px" disabled={disableInfiniteScroll} onIonInfinite={(e: CustomEvent<void>) => searchNext(e)}>
             <IonInfiniteScrollContent loadingSpinner="bubbles" loadingText="Loading for more items..."/>
         </IonInfiniteScroll>

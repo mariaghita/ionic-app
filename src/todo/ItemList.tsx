@@ -27,36 +27,27 @@ import { Network, NetworkStatus } from '@capacitor/core';
 import { IonInfiniteScroll, IonInfiniteScrollContent} from '@ionic/react';
 import { ItemProps } from './ItemProps';
 import {type} from "os";
+import {useNetwork} from "../utils/useNetwork";
 
 
 const log = getLogger('ItemList');
 
-let NStatus = "Online";
 
-
-
-Network.addListener("networkStatusChange", status => {
-  NStatus = status.connected ? "Online" : "Offline";
-  log(NStatus, "in listener");
-})
 
 const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
-  
-  const [networkStatus, setNetworkStatus] = useState<string>(NStatus);
-  Network.addListener("networkStatusChange", status => {
-    setNetworkStatus(status.connected ? "Online" : "Offline");
-    log(networkStatus, "in listener");
-  })
+
+  const {networkStatus} = useNetwork();
+  const stringStatus = (status: any) => status.connected ? "Online" : "Offline"
   const[disableInfiniteScroll, setDisableInfiniteScroll] = useState<boolean>(false);
   const[filter, setFilter] = useState<string | undefined>("any pages");
   const selectOptions = ["<=500 pages", ">500 pages", "any pages"];
   const [searchText, setSearchText] = useState<string>("");
   const renderColor = () => {
-    return networkStatus === "Online" ? "primary" : "danger";
+    return stringStatus(networkStatus) === "Online" ? "primary" : "danger";
   }
 
   const renderStatus = () => {
-    return networkStatus;
+    return stringStatus(networkStatus);
   }
 
 

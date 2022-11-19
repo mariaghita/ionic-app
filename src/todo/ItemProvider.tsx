@@ -7,7 +7,7 @@ import { AuthContext } from '../auth';
 import { Plugins, Storage } from '@capacitor/core';
 
 const log = getLogger('ItemProvider');
-const { Network } = Plugins;
+
 //const {Storage} = Plugins;
 
 
@@ -99,27 +99,11 @@ export const ItemProvider: React.FC<ItemProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { items, failCount, fetching, fetchingError, saving, savingError } = state;
   useEffect(getItemsEffect, [token]);
-  useEffect(networkStatusEffect, []);
+
   useEffect(wsEffect, [token]);
   useEffect(()=>{if(items){saveLocalStorageItems(items)}},[items])
   
-  function networkStatusEffect() {
-    Network.addListener("networkStatusChange", status => {
-      log("Network status changed: ", status);
 
-      if(status.connected){
-          items?.forEach(async item => {
-            if(item._failed){
-              dispatch({type: DELETE_DUPLICATE, payload: {item}});
-              delete item._failed;
-              delete item._id;
-            }
-            saveItemCallback(item);
-          })
-      }
-  
-      })
-    }
     const saveItem = useCallback<SaveItemFn>(saveItemCallback, [token]);
     const value = { items,failCount, fetching, fetchingError, saving, savingError, saveItem };
     log('returns');

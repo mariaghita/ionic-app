@@ -81,7 +81,7 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
     if(items?.length){
       setBooksShow(items.slice(0, pos));
     }
-  }, [ pos]);
+  }, [items, pos]); // aici
 
   useEffect(()=>{
     if(filter && items){
@@ -95,7 +95,7 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
         setBooksShow(items);
       }
     }
-  }, [filter]);
+  }, [filter, items]); //aici
 
   //search
   useEffect(()=>{
@@ -106,7 +106,7 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
     if(searchText && items){
       setBooksShow(items.filter((item) => item.name.startsWith(searchText)));
     }
-  },[searchText]);
+  },[items, searchText]); //aici. f cool.
   //log("ITEM LIST!!!!!!!!!!!!!!" + Array.isArray(items))
   //log(items)
   //log("IM HERE!!!!!!!!" + Array.isArray(booksShow));
@@ -134,7 +134,7 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
       <IonContent>
 
         <IonLoading isOpen={fetching} message="Fetching items" />
-        {items && (  //aici de rezolvat cumva
+        {items && (  //gud . gud. ok
           <IonList>
             {items && booksShow.map((item: ItemProps) =>
 
@@ -143,7 +143,7 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
           </IonList>
 
       )}
-      <IonInfiniteScroll threshold="75px" disabled={disableInfiniteScroll} onIonInfinite={(e: CustomEvent<void>) => searchNext(e)}>
+      <IonInfiniteScroll threshold="75px" disabled={false} onIonInfinite={(e: CustomEvent<void>) => searchNext(e)}>
             <IonInfiniteScrollContent loadingSpinner="bubbles" loadingText="Loading for more items..."/>
         </IonInfiniteScroll>
         {savingError &&(

@@ -2,13 +2,14 @@ import React, { useCallback, useContext, useEffect, useReducer } from 'react';
 import PropTypes from 'prop-types';
 import { getLogger } from '../core';
 import { ItemProps } from './ItemProps';
-import { createItem, getItem, getItems, newWebSocket, updateItem } from './itemApi';
+import { createItem, getItems, newWebSocket, updateItem } from './itemApi';
 import { AuthContext } from '../auth';
-import { Plugins, Storage } from '@capacitor/core';
+import { Plugins } from '@capacitor/core';
+import {useNetwork} from "../utils/useNetwork";
 
 const log = getLogger('ItemProvider');
 
-//const {Storage} = Plugins;
+const {Storage} = Plugins;
 
 
 type SaveItemFn = (item: ItemProps) => Promise<any>;
@@ -95,23 +96,35 @@ interface ItemProviderProps {
 }
 
 export const ItemProvider: React.FC<ItemProviderProps> = ({ children }) => {
+  const {networkStatus} = useNetwork();
   const {token} = useContext(AuthContext);
   const [state, dispatch] = useReducer(reducer, initialState);
   const { items, failCount, fetching, fetchingError, saving, savingError } = state;
   useEffect(getItemsEffect, [token]);
-
   useEffect(wsEffect, [token]);
   useEffect(()=>{if(items){saveLocalStorageItems(items)}},[items])
-  
 
-    const saveItem = useCallback<SaveItemFn>(saveItemCallback, [token]);
-    const value = { items,failCount, fetching, fetchingError, saving, savingError, saveItem };
-    log('returns');
-    return (
+  useEffect(() => {
+    if(networkStatus.connected){
+      items?.forEach(async item => {
+        if(item._failed){
+          dispatch({type: DELETE_DUPLICATE, payload: {item}});
+          delete item._failed
+          delete item._id
+        }
+        saveItemCallback(item);
+      })
+    }
+  }, [networkStatus])
+
+  const saveItem = useCallback<SaveItemFn>(saveItemCallback, [token]);
+  const value = { items,failCount, fetching, fetchingError, saving, savingError, saveItem };
+  log('returns');
+  return (
     <ItemContext.Provider value={value}>
       {children}
     </ItemContext.Provider>
-    );
+  );
 
   function getItemsEffect() {
     let canceled = false;
@@ -147,7 +160,7 @@ export const ItemProvider: React.FC<ItemProviderProps> = ({ children }) => {
   async function getLocalStorageItems(){
     return JSON.parse((await Storage.get({
       key: 'items',
-    })).value);
+    })).value as string);
   }
 
   async function saveLocalStorageItems(items:ItemProps[]){

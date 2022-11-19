@@ -15,10 +15,6 @@ const config = {
   }
 };
 
-export const getItem: (id: string | undefined) => Promise<ItemProps> = id => {
-  return withLogs(axios.get(`${itemUrl}/${id}`, config), 'getItem');
-}
-
 export const getItems: (token: string | null) => Promise<ItemProps[]> = token => {
   return withLogs(axios.get(itemUrl, authConfig(token)), 'getItems');
 }

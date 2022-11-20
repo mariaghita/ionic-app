@@ -9,4 +9,6 @@ export interface ItemProps {
   pages: number;
   _failed?: boolean;
   photoBase64: string;
+  latitude: number;
+  longitude: number;
 }

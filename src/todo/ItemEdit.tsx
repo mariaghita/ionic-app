@@ -20,6 +20,8 @@ import { RouteComponentProps } from 'react-router';
 import { ItemProps } from './ItemProps';
 import {PhotoModal} from "../components/PhotoModal";
 import {usePhotoGallery} from "../hooks/usePhotoGallery";
+import {useMyLocation} from "../hooks/useMyLocation";
+import {MyMap} from "../components/MyMap";
 
 const log = getLogger('ItemEdit');
 
@@ -36,8 +38,12 @@ const ItemEdit: React.FC<ItemEditProps> = ({ history, match }) => {
   const [publish_date, setDate] = useState(new Date(Date.now()));
   const [photoBase64, setPhotoBase64] = useState('');
   const [pages, setPages] = useState(0);
+  const [latitude, setLatitude] = useState(0);
+  const [longitude, setLongitude] = useState(0);
   const [item, setItem] = useState<ItemProps>();
   const {takePhotoBase64} = usePhotoGallery();
+  const [mapVisible, setMapVisible] = useState(false);
+  const myLocation = useMyLocation();
 
   useEffect(() => {
     log('useEffect');
@@ -51,13 +57,15 @@ const ItemEdit: React.FC<ItemEditProps> = ({ history, match }) => {
       setDate(item.publish_date);
       setPages(item.pages);
       setPhotoBase64(item.photoBase64);
+      setLatitude(item.latitude);
+      setLongitude(item.longitude);
       
     }
   }, [match.params.id, items]);
   const handleSave = useCallback(() => {
-    const editedItem = item ? { ...item, name, author, available, pages, publish_date, photoBase64 } : { name, author, available, pages, publish_date, photoBase64 };
+    const editedItem = item ? { ...item, name, author, available, pages, publish_date, photoBase64, latitude, longitude } : { name, author, available, pages, publish_date, photoBase64, latitude, longitude };
     saveItem && saveItem(editedItem).then(() => history.goBack());
-  }, [item, saveItem, name, author, available, pages, publish_date,  history]);
+  }, [item, saveItem, name, author, available, pages, publish_date, photoBase64, latitude, longitude, history]);
   log('render');
   return (
     <IonPage>
@@ -87,12 +95,35 @@ const ItemEdit: React.FC<ItemEditProps> = ({ history, match }) => {
         <IonItem>
           <IonLabel>Publish date: </IonLabel><IonDatetime value={publish_date.toString()} onIonChange={e => setDate(new Date(e.detail.value || new Date(Date.now())))} />
         </IonItem>
+        <IonButton onClick={ () => {
+          let loc = myLocation.position?.coords;
+          setLongitude(loc?.longitude ?? 0);
+          setLatitude(loc?.latitude ?? 0);
+        }}>
+          Use Current Location
+        </IonButton>
         <IonButton onClick={
           async () => setPhotoBase64(await takePhotoBase64(item?._id ?? "Unknown"))
         }>
           Take Photo
         </IonButton>
+        {console.log(photoBase64)}
         <PhotoModal base64Data={photoBase64}/>
+        { mapVisible &&
+            <MyMap
+                lat={latitude ?? 0}
+                lng={longitude ?? 0}
+                onMapClick={
+                  (e: any) => {
+                    console.log(e.latLng.lat())
+                    console.log(e.latLng.lng())
+                    setLatitude(e.latLng.lat())
+                    setLongitude(e.latLng.lng())
+                  }
+                }
+                onMarkerClick={log('onMarker')}
+            />
+        }
         <IonLoading isOpen={saving} />
         {savingError && (
           <div>{savingError.message || 'Failed to save item'}</div>

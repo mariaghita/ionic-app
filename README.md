@@ -11,10 +11,17 @@ Items = Books (id,
  - show a list of books;
  - add/edit books;
  - use rest services to fetch data
-
+ - - -
 lab 02:
 - auth user;
 - display network status;
 - filter by pages (<500 or >=500);
 - search by name;
 - local storage;
+ - - -
+lab03:
+- photos:
+  - allow user to take a photo
+  - show photo when the resource is shown (list/view/edit)
+  - save photo on the device
+  - upload photo

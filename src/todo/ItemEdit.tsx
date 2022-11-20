@@ -18,6 +18,8 @@ import { getLogger } from '../core';
 import { ItemContext } from './ItemProvider';
 import { RouteComponentProps } from 'react-router';
 import { ItemProps } from './ItemProps';
+import {PhotoModal} from "../components/PhotoModal";
+import {usePhotoGallery} from "../hooks/usePhotoGallery";
 
 const log = getLogger('ItemEdit');
 
@@ -32,9 +34,11 @@ const ItemEdit: React.FC<ItemEditProps> = ({ history, match }) => {
   const [author, setAuthor] = useState('');
   const [available, setAvailability] = useState(true);
   const [publish_date, setDate] = useState(new Date(Date.now()));
+  const [photoBase64, setPhotoBase64] = useState('');
   const [pages, setPages] = useState(0);
   const [item, setItem] = useState<ItemProps>();
-  
+  const {takePhotoBase64} = usePhotoGallery();
+
   useEffect(() => {
     log('useEffect');
     const routeId = match.params.id || '';
@@ -46,11 +50,12 @@ const ItemEdit: React.FC<ItemEditProps> = ({ history, match }) => {
       setAvailability(item.available);
       setDate(item.publish_date);
       setPages(item.pages);
+      setPhotoBase64(item.photoBase64);
       
     }
   }, [match.params.id, items]);
   const handleSave = useCallback(() => {
-    const editedItem = item ? { ...item, name, author, available, pages, publish_date } : { name, author, available, pages, publish_date };
+    const editedItem = item ? { ...item, name, author, available, pages, publish_date, photoBase64 } : { name, author, available, pages, publish_date, photoBase64 };
     saveItem && saveItem(editedItem).then(() => history.goBack());
   }, [item, saveItem, name, author, available, pages, publish_date,  history]);
   log('render');
@@ -82,6 +87,12 @@ const ItemEdit: React.FC<ItemEditProps> = ({ history, match }) => {
         <IonItem>
           <IonLabel>Publish date: </IonLabel><IonDatetime value={publish_date.toString()} onIonChange={e => setDate(new Date(e.detail.value || new Date(Date.now())))} />
         </IonItem>
+        <IonButton onClick={
+          async () => setPhotoBase64(await takePhotoBase64(item?._id ?? "Unknown"))
+        }>
+          Take Photo
+        </IonButton>
+        <PhotoModal base64Data={photoBase64}/>
         <IonLoading isOpen={saving} />
         {savingError && (
           <div>{savingError.message || 'Failed to save item'}</div>

@@ -8,4 +8,5 @@ export interface ItemProps {
   publish_date: Date;
   pages: number;
   _failed?: boolean;
+  photoBase64: string;
 }

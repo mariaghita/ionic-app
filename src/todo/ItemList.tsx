@@ -138,7 +138,7 @@ const ItemList: React.FC<RouteComponentProps> = ({ history }) => {
           <IonList>
             {items && booksShow.map((item: ItemProps) =>
 
-              <Item key={item._id} _id={item._id} name={item.name}  onEdit={id => history.push(`/item/${id}`)} author={item.author} available={item.available} publish_date={item.publish_date} pages={item.pages} />
+              <Item key={item._id} _id={item._id} name={item.name}  onEdit={id => history.push(`/item/${id}`)} author={item.author} available={item.available} publish_date={item.publish_date} pages={item.pages} photoBase64={item.photoBase64}/>
             )}
           </IonList>
 

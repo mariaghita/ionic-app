@@ -22,6 +22,7 @@ import {PhotoModal} from "../components/PhotoModal";
 import {usePhotoGallery} from "../hooks/usePhotoGallery";
 import {useMyLocation} from "../hooks/useMyLocation";
 import {MyMap} from "../components/MyMap";
+import {createAnimation, Animation} from "@ionic/core";
 
 const log = getLogger('ItemEdit');
 
@@ -66,12 +67,16 @@ const ItemEdit: React.FC<ItemEditProps> = ({ history, match }) => {
     const editedItem = item ? { ...item, name, author, available, pages, publish_date, photoBase64, latitude, longitude } : { name, author, available, pages, publish_date, photoBase64, latitude, longitude };
     saveItem && saveItem(editedItem).then(() => history.goBack());
   }, [item, saveItem, name, author, available, pages, publish_date, photoBase64, latitude, longitude, history]);
+
+  useEffect(simpleAnimation, []);
   log('render');
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
+          <div className={"animatedElement"}>
           <IonTitle>Edit Book</IonTitle>
+          </div>
           <IonButtons slot="end">
             <IonButton onClick={handleSave}>
               Save Book
@@ -135,5 +140,24 @@ const ItemEdit: React.FC<ItemEditProps> = ({ history, match }) => {
     </IonPage>
   );
 };
+function simpleAnimation() {
+  const el = document.querySelector(".animatedElement");
+  if(el){
+    const animation = createAnimation()
+        .addElement(el)
+        .duration(5000)
+        .direction("alternate")
+        .iterations(2)
+        .keyframes([
+          { offset: 0, transform: 'scale(1)', opacity: '1' },
+          { offset: 0.5, transform: 'scale(0.5)', opacity: '1' },
+          {
+            offset: 1, transform: 'scale(1.5)', opacity: '0.2'
+          }
+        ]);
+    animation.play();
+  }
+}
+
 
 export default ItemEdit;

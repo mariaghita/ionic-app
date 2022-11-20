@@ -29,3 +29,6 @@ lab03:
 - maps:
   - in edit page allow user to set location ( current location or custom )
   - allow user to open a map in order to locate the item 
+- animation
+  - override animation (photo modal)
+  - animate a component (edit book)

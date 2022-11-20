@@ -38,8 +38,8 @@ const ItemEdit: React.FC<ItemEditProps> = ({ history, match }) => {
   const [publish_date, setDate] = useState(new Date(Date.now()));
   const [photoBase64, setPhotoBase64] = useState('');
   const [pages, setPages] = useState(0);
-  const [latitude, setLatitude] = useState(0);
-  const [longitude, setLongitude] = useState(0);
+  const [latitude, setLatitude] = useState(44);
+  const [longitude, setLongitude] = useState(26);
   const [item, setItem] = useState<ItemProps>();
   const {takePhotoBase64} = usePhotoGallery();
   const [mapVisible, setMapVisible] = useState(false);
@@ -101,6 +101,9 @@ const ItemEdit: React.FC<ItemEditProps> = ({ history, match }) => {
           setLatitude(loc?.latitude ?? 0);
         }}>
           Use Current Location
+        </IonButton>
+        <IonButton onClick={() => setMapVisible(!mapVisible)}>
+          Edit Location
         </IonButton>
         <IonButton onClick={
           async () => setPhotoBase64(await takePhotoBase64(item?._id ?? "Unknown"))

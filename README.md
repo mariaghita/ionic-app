@@ -27,5 +27,5 @@ lab03:
   - save photo on the device
   - upload photo
 - maps:
-  - in edit page allow user to set current location ( de modificat sa poate alege custom )
-  - allow user to open a map in order to locate the item -> done
+  - in edit page allow user to set location ( current location or custom )
+  - allow user to open a map in order to locate the item 
